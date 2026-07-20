@@ -26,14 +26,15 @@ interface PRDetailViewProps {
   prId: string;
   onBack: () => void;
   refreshPRList: () => void;
+  user: any;
 }
 
-export function PRDetailView({ prId, onBack, refreshPRList }: PRDetailViewProps) {
+export function PRDetailView({ prId, onBack, refreshPRList, user }: PRDetailViewProps) {
   const [pr, setPr] = useState<PullRequest | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [messageText, setMessageText] = useState('');
-  const [chatUser, setChatUser] = useState<'admin' | 'contributor'>('admin');
+  const [chatUser, setChatUser] = useState<'admin' | 'contributor'>(user?.role === 'admin' ? 'admin' : 'contributor');
   const [isSubmittingChat, setIsSubmittingChat] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'diff' | 'analysis' | 'replay'>('chat');
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -101,10 +102,10 @@ export function PRDetailView({ prId, onBack, refreshPRList }: PRDetailViewProps)
     try {
       const body = {
         sender: chatUser,
-        senderName: chatUser === 'admin' ? 'Maintainer (You)' : 'dev_alex_99',
+        senderName: chatUser === 'admin' ? `Maintainer (${user?.username || 'You'})` : `@${user?.username || 'user'}`,
         senderAvatar: chatUser === 'admin' 
           ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80'
-          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
+          : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
         message: messageText
       };
 
@@ -233,7 +234,7 @@ export function PRDetailView({ prId, onBack, refreshPRList }: PRDetailViewProps)
             >
               Back to Dashboard
             </button>
-            {pr.state !== 'merged' && (
+            {pr.state !== 'merged' && user?.role === 'admin' && (
               <button 
                 onClick={() => setShowOverrideDialog(true)}
                 className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition flex items-center gap-1.5 cursor-pointer"
@@ -284,19 +285,21 @@ export function PRDetailView({ prId, onBack, refreshPRList }: PRDetailViewProps)
         >
           <Code className="w-4 h-4" /> Code diff & comments
         </button>
-        <button
-          onClick={() => {
-            setActiveTab('replay');
-            fetchReplays();
-          }}
-          className={`flex items-center gap-2 px-4 py-3.5 text-xs font-semibold border-b-2 transition whitespace-nowrap cursor-pointer ${
-            activeTab === 'replay' 
-              ? 'border-indigo-500 text-indigo-400' 
-              : 'border-transparent text-white/40 hover:text-white/80'
-          }`}
-        >
-          <History className="w-4 h-4" /> Review Replay Simulator
-        </button>
+        {user?.role === 'admin' && (
+          <button
+            onClick={() => {
+              setActiveTab('replay');
+              fetchReplays();
+            }}
+            className={`flex items-center gap-2 px-4 py-3.5 text-xs font-semibold border-b-2 transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'replay' 
+                ? 'border-indigo-500 text-indigo-400' 
+                : 'border-transparent text-white/40 hover:text-white/80'
+            }`}
+          >
+            <History className="w-4 h-4" /> Review Replay Simulator
+          </button>
+        )}
       </div>
 
       {/* Override Action Dialogue */}
@@ -368,20 +371,22 @@ export function PRDetailView({ prId, onBack, refreshPRList }: PRDetailViewProps)
                   <span className="text-lg font-bold text-white/30 font-mono">#</span>
                   <span className="text-xs font-semibold font-mono">pr-discussion-ch{pr.number}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-[#050506] border border-white/10 p-1 rounded-lg">
-                  <button 
-                    onClick={() => setChatUser('admin')}
-                    className={`px-2.5 py-1 text-[10px] rounded transition font-bold uppercase cursor-pointer ${chatUser === 'admin' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
-                  >
-                    As Maintainer
-                  </button>
-                  <button 
-                    onClick={() => setChatUser('contributor')}
-                    className={`px-2.5 py-1 text-[10px] rounded transition font-bold uppercase cursor-pointer ${chatUser === 'contributor' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
-                  >
-                    As @{pr.author}
-                  </button>
-                </div>
+                {user?.role === 'admin' && (
+                  <div className="flex items-center gap-2 bg-[#050506] border border-white/10 p-1 rounded-lg">
+                    <button 
+                      onClick={() => setChatUser('admin')}
+                      className={`px-2.5 py-1 text-[10px] rounded transition font-bold uppercase cursor-pointer ${chatUser === 'admin' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
+                    >
+                      As Maintainer
+                    </button>
+                    <button 
+                      onClick={() => setChatUser('contributor')}
+                      className={`px-2.5 py-1 text-[10px] rounded transition font-bold uppercase cursor-pointer ${chatUser === 'contributor' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
+                    >
+                      As @{pr.author}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Message Feed */}

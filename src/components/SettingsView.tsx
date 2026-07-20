@@ -5,18 +5,29 @@ import {
   Sparkles, 
   Sliders, 
   Coins, 
-  Flame, 
-  Lock, 
-  HelpCircle,
-  Save,
-  CheckCircle2
+  Save, 
+  CheckCircle2,
+  Lock,
+  ExternalLink,
+  Github
 } from 'lucide-react';
 
-export function SettingsView() {
+interface SettingsViewProps {
+  user?: any;
+  onUserUpdate?: (user: any) => void;
+}
+
+export function SettingsView({ user, onUserUpdate }: SettingsViewProps) {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // GitHub token state
+  const [githubToken, setGithubToken] = useState('');
+  const [updatingToken, setUpdatingToken] = useState(false);
+  const [tokenSuccess, setTokenSuccess] = useState(false);
+  const [tokenError, setTokenError] = useState('');
 
   const fetchSettings = async () => {
     try {
@@ -59,6 +70,41 @@ export function SettingsView() {
     }
   };
 
+  const handleUpdateToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!githubToken.trim()) return;
+
+    setUpdatingToken(true);
+    setTokenError('');
+    setTokenSuccess(false);
+
+    try {
+      const res = await fetch('/api/auth/pat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: githubToken })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.user) {
+        setTokenSuccess(true);
+        setGithubToken('');
+        if (onUserUpdate) {
+          onUserUpdate(data.user);
+        }
+        setTimeout(() => setTokenSuccess(false), 3000);
+      } else {
+        setTokenError(data.error || 'Failed to authenticate token with GitHub.');
+      }
+    } catch (err) {
+      console.error(err);
+      setTokenError('Network error connecting to GitHub. Verify backend connection.');
+    } finally {
+      setUpdatingToken(false);
+    }
+  };
+
   if (isLoading || !settings) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -87,9 +133,9 @@ export function SettingsView() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Core settings */}
-        <div className="lg:col-span-2 space-y-6">
+        <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6">
           <div className="bg-[#050506] border border-white/10 rounded-xl p-6 space-y-5 shadow-2xl">
             <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 flex items-center gap-1.5 border-b border-white/5 pb-3 font-mono">
               <Sparkles className="w-4 h-4 text-white/60" /> Prompt Customizer (Gemini System Instruction)
@@ -123,8 +169,8 @@ export function SettingsView() {
                   onChange={(e) => setSettings({ ...settings, aiModel: e.target.value })}
                   className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg p-2.5 text-white/80 focus:outline-none"
                 >
-                  <option value="gemini-3.5-flash">gemini-3.5-flash (Highest speed/low cost)</option>
-                  <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Advanced complex analysis)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash (Highest speed/low cost)</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro (Advanced complex analysis)</option>
                 </select>
               </div>
 
@@ -165,10 +211,7 @@ export function SettingsView() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Gamification point details */}
-        <div className="space-y-6">
           <div className="bg-[#050506] border border-white/10 rounded-xl p-5 space-y-4 shadow-2xl">
             <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 flex items-center gap-1.5 border-b border-white/5 pb-3 font-mono">
               <Coins className="w-4.5 h-4.5 text-amber-400" /> Point Settings
@@ -185,15 +228,6 @@ export function SettingsView() {
                   required
                 />
               </div>
-
-              <div className="p-3.5 bg-white/[0.01] border border-white/5 rounded-lg leading-relaxed text-white/40 text-[11px] space-y-2 font-sans">
-                <p>
-                  • **Streak Multipliers**: Consecutive clean daily merges boost contribution scores by a 1.5x multiplier.
-                </p>
-                <p>
-                  • **Leaderboards Ranking**: Contributor standings automatically calculate total points, tracking badges, and achievement triggers.
-                </p>
-              </div>
             </div>
           </div>
 
@@ -205,8 +239,85 @@ export function SettingsView() {
             <Save className="w-4 h-4" />
             {isSaving ? 'Saving Configurations...' : 'Commit Settings'}
           </button>
+        </form>
+
+        {/* GitHub Credential sidebar */}
+        <div className="space-y-6">
+          <div className="bg-[#050506] border border-white/10 rounded-xl p-5 space-y-4 shadow-2xl">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 flex items-center gap-1.5 border-b border-white/5 pb-3 font-mono">
+              <Github className="w-4.5 h-4.5 text-indigo-400" /> GitHub Credentials
+            </h3>
+
+            {user && user.githubToken ? (
+              <div className="space-y-3">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    GitHub Access Active
+                  </div>
+                  <div className="text-[11px] text-white/60 font-mono">
+                    Username: <span className="text-white font-semibold">@{user.githubUsername}</span>
+                  </div>
+                  <div className="text-[10px] text-white/40 leading-relaxed font-sans">
+                    A secure Personal Access Token is securely stored and configured to listen for PR commits and synchronize review threads.
+                  </div>
+                </div>
+
+                <div className="border-t border-white/5 pt-3">
+                  <span className="text-[10px] font-bold text-white/40 uppercase font-mono block mb-2">Change Token</span>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-amber-500/10 border border-amber-500/20 p-3.5 rounded-xl text-xs space-y-1 text-amber-400">
+                <p className="font-semibold">Credentials Missing</p>
+                <p className="text-[10px] text-white/60 leading-relaxed font-sans">
+                  Onboard a GitHub Personal Access Token to synchronize real pull request data and reviews.
+                </p>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateToken} className="space-y-3 text-xs pt-1">
+              {tokenSuccess && (
+                <div className="bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 rounded p-2 text-[11px] leading-relaxed">
+                  Token validated and successfully connected!
+                </div>
+              )}
+              {tokenError && (
+                <div className="bg-red-500/15 border border-red-500/20 text-red-400 rounded p-2 text-[11px] leading-relaxed">
+                  {tokenError}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-white/40 uppercase font-mono">Personal Access Token (PAT)</label>
+                <input
+                  type="password"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg p-2.5 text-white font-mono focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="text-[10px] text-white/30 leading-normal flex items-start gap-1">
+                <Lock className="w-3.5 h-3.5 text-white/40 shrink-0 mt-0.5" />
+                <span>
+                  Requires `repo` scope permissions. Build a PAT inside <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline inline-flex items-center gap-0.5">GitHub Developer Settings <ExternalLink className="w-2.5 h-2.5" /></a>
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={updatingToken || !githubToken.trim()}
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-xs rounded-lg shadow-lg shadow-indigo-500/10 transition cursor-pointer"
+              >
+                {updatingToken ? 'Verifying...' : 'Link GitHub Account'}
+              </button>
+            </form>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

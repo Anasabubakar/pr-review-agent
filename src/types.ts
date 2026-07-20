@@ -7,6 +7,15 @@ export interface Repository {
   description: string;
   createdAt: string;
   isMock?: boolean;
+  isEnabled?: boolean;
+  installationStatus?: 'installed' | 'not_installed';
+  webhookStatus?: 'active' | 'inactive';
+  syncStatus?: 'synced' | 'syncing' | 'failed';
+  lastSyncAt?: string;
+  branchProtection?: string;
+  aiReviewStatus?: 'enabled' | 'disabled';
+  healthScore?: number;
+  indexingStatus?: 'indexed' | 'indexing' | 'pending';
 }
 
 export type PRState = 'open' | 'closed' | 'merged';
@@ -145,4 +154,62 @@ export interface SystemSettings {
   autoMergeDefault: boolean;
   isMaintenanceMode: boolean;
   pointsOnMerge: number;
+  allowedAdminEmails?: string[];
+  githubClientId?: string;
+  githubClientSecret?: string;
+  githubAppId?: string;
+  githubPrivateKey?: string;
 }
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  passwordHash: string;
+  avatar: string;
+  githubToken?: string;
+  githubUsername?: string;
+  githubId?: string;
+  role: 'admin' | 'member';
+  createdAt: string;
+  organizations?: string[];
+  repositories?: string[];
+  installations?: any[];
+  isOnboarded?: boolean;
+}
+
+export interface Session {
+  id: string;
+  userId: string;
+  expiresAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'approved' | 'changes_requested' | 'merge_completed' | 'agent_mention' | 'admin_mention' | 'repo_invitation' | 'new_comment' | 'review_complete';
+  title: string;
+  message: string;
+  isRead: boolean;
+  timestamp: string;
+  prId?: string;
+  repoId?: string;
+}
+
+export interface GitHubIssue {
+  id: string;
+  repoId: string;
+  number: number;
+  title: string;
+  body: string;
+  state: 'open' | 'closed';
+  assignee?: string;
+  assigneeAvatar?: string;
+  labels: string[];
+  milestone?: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+

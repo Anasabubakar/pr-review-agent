@@ -10,7 +10,11 @@ import {
   AuditLog, 
   WebhookEvent, 
   SystemSettings,
-  ReviewReplay
+  ReviewReplay,
+  User,
+  Session,
+  Notification,
+  GitHubIssue
 } from '../types.js';
 
 const DB_FILE = path.join(process.cwd(), 'db.json');
@@ -26,6 +30,10 @@ interface Schema {
   webhookEvents: WebhookEvent[];
   settings: SystemSettings;
   replays: ReviewReplay[];
+  users: User[];
+  sessions: Session[];
+  notifications: Notification[];
+  issues: GitHubIssue[];
 }
 
 const DEFAULT_RULES: OverrideRule[] = [
@@ -103,329 +111,9 @@ Specify a confidence score (0-100) and clear reasoning.`,
   webhookSecret: 'pr_agent_secret_secure_1337',
   autoMergeDefault: true,
   isMaintenanceMode: false,
-  pointsOnMerge: 15
+  pointsOnMerge: 15,
+  allowedAdminEmails: ['anasabubakar7000@gmail.com', 'adesanyafuhad5@gmail.com']
 };
-
-const SEED_REPOS: Repository[] = [
-  {
-    id: 'repo_fastapi_node',
-    owner: 'expressjs',
-    name: 'node-microservices-core',
-    defaultBranch: 'main',
-    language: 'TypeScript',
-    description: 'High performance enterprise framework built with modern Express routing conventions.',
-    createdAt: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'repo_vector_db',
-    owner: 'gemini-org',
-    name: 'vector-index-agent',
-    defaultBranch: 'main',
-    language: 'TypeScript',
-    description: 'Autonomous context-retrieval pipeline indexing system documentation with vector search capabilities.',
-    createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString()
-  }
-];
-
-const SEED_PR_LIST: PullRequest[] = [
-  {
-    id: 'pr_101',
-    repoId: 'repo_fastapi_node',
-    number: 101,
-    title: 'feat: Add JWT token validation middleware',
-    state: 'open',
-    body: 'Implements full JSON Web Token parsing, validation, and request decorating middleware for private paths.',
-    headRef: 'feat/jwt-middleware',
-    baseRef: 'main',
-    author: 'dev_alex_99',
-    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
-    prUrl: 'https://github.com/expressjs/node-microservices-core/pull/101',
-    commentsCount: 3,
-    pointsAwarded: 0,
-    confidenceScore: 92,
-    autoMerge: true,
-    forceApproved: false,
-    isFlagged: true,
-    reviewStatus: 'flagged',
-    flagReason: 'Touches sensitive path: middleware/auth.ts (Security Rule Triggered)',
-    lineCount: 145,
-    createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-    diffText: `diff --git a/src/middleware/auth.ts b/src/middleware/auth.ts
-new file mode 100644
-index 0000000..9df2bc3
---- /dev/null
-+++ b/src/middleware/auth.ts
-@@ -0,0 +1,24 @@
-+import { Request, Response, NextFunction } from 'express';
-+import jwt from 'jsonwebtoken';
-+
-+export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-+  const authHeader = req.headers['authorization'];
-+  const token = authHeader && authHeader.split(' ')[1];
-+
-+  if (!token) {
-+    return res.status(401).json({ error: 'Access token required' });
-+  }
-+
-+  // CRITICAL: Hardcoded backup secret key for auth fallback?
-+  const SECRET = process.env.JWT_SECRET || 'fallback_secret_not_safe';
-+
-+  jwt.verify(token, SECRET, (err: any, user: any) => {
-+    if (err) {
-+      return res.status(403).json({ error: 'Invalid or expired token' });
-+    }
-+    req.user = user;
-+    next();
-+  });
-+};
-+`
-  },
-  {
-    id: 'pr_102',
-    repoId: 'repo_vector_db',
-    number: 48,
-    title: 'fix: Vector similarity sorting algorithm precision',
-    state: 'merged',
-    body: 'Corrects dot-product normalization formula that caused off-by-one ordering inside large context caches.',
-    headRef: 'fix/similarity-sort',
-    baseRef: 'main',
-    author: 'hacker_clara',
-    authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
-    prUrl: 'https://github.com/gemini-org/vector-index-agent/pull/48',
-    commentsCount: 2,
-    pointsAwarded: 15,
-    confidenceScore: 98,
-    autoMerge: true,
-    forceApproved: true,
-    isFlagged: false,
-    reviewStatus: 'approved',
-    flagReason: '',
-    lineCount: 35,
-    createdAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
-    diffText: `diff --git a/src/math/similarity.ts b/src/math/similarity.ts
-index e234ef1..d12b399 100644
---- a/src/math/similarity.ts
-+++ b/src/math/similarity.ts
-@@ -10,6 +10,6 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
-   let sumA = 0;
-   let sumB = 0;
-   for (let i = 0; i < vecA.length; i++) {
--    dotProduct += vecA[i] * vecB[i];
-+    dotProduct += vecA[i] * vecB[i];
-     sumA += vecA[i] * vecA[i];
-     sumB += vecB[i] * vecB[i];
-   }
--  return dotProduct / (Math.sqrt(sumA) * Math.sqrt(sumB));
-+  const denominator = Math.sqrt(sumA) * Math.sqrt(sumB);
-+  return denominator === 0 ? 0 : dotProduct / denominator;
- }
-`
-  },
-  {
-    id: 'pr_103',
-    repoId: 'repo_fastapi_node',
-    number: 102,
-    title: 'perf: caching layer replacement and Redis connection pool',
-    state: 'open',
-    body: 'Replaces standard in-memory array cache with high performance clusters and configurable thread pools.',
-    headRef: 'perf/redis-upgrade',
-    baseRef: 'main',
-    author: 'speedy_sam',
-    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
-    prUrl: 'https://github.com/expressjs/node-microservices-core/pull/102',
-    commentsCount: 1,
-    pointsAwarded: 0,
-    confidenceScore: 72,
-    autoMerge: false,
-    forceApproved: false,
-    isFlagged: false,
-    reviewStatus: 'changes_requested',
-    flagReason: '',
-    lineCount: 412,
-    createdAt: new Date(Date.now() - 10 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 9 * 3600 * 1000).toISOString(),
-    diffText: `diff --git a/src/cache/redis.ts b/src/cache/redis.ts
-new file mode 100644
-index 0000000..f82b7cd
---- /dev/null
-+++ b/src/cache/redis.ts
-@@ -0,0 +1,18 @@
-+import Redis from 'ioredis';
-+
-+// Unhandled promise rejection risk below, and missing process.env safety limits
-+export class CacheEngine {
-+  private client: Redis;
-+  
-+  constructor() {
-+    this.client = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-+  }
-+
-+  async get(key: string) {
-+    return await this.client.get(key);
-+  }
-+
-+  async set(key: string, val: string) {
-+    // No expiration parameter has been specified!
-+    await this.client.set(key, val);
-+  }
-+}
-+`
-  }
-];
-
-const SEED_REVIEWS: Review[] = [
-  {
-    id: 'rev_101',
-    prId: 'pr_101',
-    score: 85,
-    summary: 'The JWT authentication middleware is mostly solid, but we flagged it because it updates a highly sensitive path (`src/middleware/auth.ts`) and includes a potentially risky hardcoded fallback secret key which violates our strict security standard.',
-    correctness: 'The routing middleware integrates well with Express standard arguments and correctly intercepts headers. Token split operation operates as expected.',
-    security: 'CRITICAL WARNING: The backup hardcoded string value `"fallback_secret_not_safe"` is set as a fallback when the `JWT_SECRET` environment variable is not defined. In a staging or production build without environment vars, this exposes the system to signature forging. Remove fallback secrets immediately.',
-    performance: 'Extremely lightweight token validation process. Minimal memory allocation overhead.',
-    maintainability: 'Well documented parameters and clean typing declarations.',
-    inlineComments: [
-      {
-        file: 'src/middleware/auth.ts',
-        line: 12,
-        comment: 'CRITICAL SECURITY BREACH: Never use a hardcoded secret key fallback in authentication modules. If `process.env.JWT_SECRET` is missing, the application should throw a fatal error on startup.',
-        suggestion: "if (!process.env.JWT_SECRET) {\n  throw new Error('JWT_SECRET env variable must be declared');\n}\nconst SECRET = process.env.JWT_SECRET;",
-        type: 'issue'
-      },
-      {
-        file: 'src/middleware/auth.ts',
-        line: 5,
-        comment: 'Recommendation: Restrict this middleware to only process Bearer tokens rather than arbitrary splits.',
-        type: 'info'
-      }
-    ],
-    decidedAction: 'flag',
-    reason: 'Touches protected sensitive auth files & contains fallback secrets.',
-    confidence: 95,
-    createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'rev_102',
-    prId: 'pr_102',
-    score: 99,
-    summary: 'Outstanding bugfix. The vector calculation correctly accounts for potential divide-by-zero scenarios and prevents sorting indexing from sliding into negative coordinates.',
-    correctness: 'The denominator-handling code is clean, well-bounded, and verified by mathematical tests.',
-    security: 'No security credentials or risk exposures identified in this module.',
-    performance: 'Optimized check runs. Safely checks values in memory without re-initializing coefficients.',
-    maintainability: 'Maintains code clarity and complies perfectly with vector index standards.',
-    inlineComments: [],
-    decidedAction: 'approve',
-    reason: 'PR addresses bug precisely and includes essential bounds checking. Passed all override thresholds.',
-    confidence: 99,
-    createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'rev_103',
-    prId: 'pr_103',
-    score: 68,
-    summary: 'Review requested major structural modifications before merging this caching layer.',
-    correctness: 'Connection pool initialization is prone to unhandled errors if Redis is currently offline.',
-    security: 'Requires credential verification limits.',
-    performance: 'Unbounded cache sets are prone to memory leaks. Every caching mechanism must declare an explicit default TTL (Time-To-Live).',
-    maintainability: 'Lacks documentation on setup and required environment variables.',
-    inlineComments: [
-      {
-        file: 'src/cache/redis.ts',
-        line: 15,
-        comment: 'Performance Issue: Setting persistent keys without a TTL or maximum eviction configuration can slowly deplete Redis node memory.',
-        suggestion: "await this.client.set(key, val, 'EX', 3600); // Set default 1 hour expiration",
-        type: 'warning'
-      }
-    ],
-    decidedAction: 'request_changes',
-    reason: 'Missing default TTL values and connection recovery blocks.',
-    confidence: 88,
-    createdAt: new Date(Date.now() - 9 * 3600 * 1000).toISOString()
-  }
-];
-
-const SEED_CHAT: ChatMessage[] = [
-  {
-    id: 'msg_1',
-    prId: 'pr_101',
-    sender: 'agent',
-    senderName: 'PR Review Agent',
-    senderAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&h=150&q=80',
-    message: '👋 Hello Alex! I have completed analyzing your PR changes. I found **1 critical issue** and **1 general suggestion** regarding your JWT authentication module. Because this touches sensitive paths, this PR has been flagged for human maintainer approval.',
-    timestamp: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-    isSystem: true
-  },
-  {
-    id: 'msg_2',
-    prId: 'pr_101',
-    sender: 'contributor',
-    senderName: 'dev_alex_99',
-    senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
-    message: 'Thanks for the quick review! Ah, I see the hardcoded fallback. I added that just for my local development setup since I had not provisioned the environment variables. Let me fix it immediately.',
-    timestamp: new Date(Date.now() - 20 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'msg_3',
-    prId: 'pr_101',
-    sender: 'admin',
-    senderName: 'Maintainer (You)',
-    senderAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80',
-    message: 'Hey Alex, good catch by the agent. Please update the middleware to throw an explicit configuration error if JWT_SECRET is undefined, then re-push. We will approve and let the agent auto-merge it once checks pass!',
-    timestamp: new Date(Date.now() - 15 * 3600 * 1000).toISOString()
-  }
-];
-
-const SEED_POINTS: ContributorPoint[] = [
-  {
-    id: 'pt_clara',
-    username: 'hacker_clara',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
-    points: 125,
-    streak: 4,
-    prsMerged: 8,
-    reviewsCompleted: 12,
-    achievements: ['Fast Merger', 'Bug Squasher', 'Streak Master'],
-    lastContributionDate: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'pt_alex',
-    username: 'dev_alex_99',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
-    points: 45,
-    streak: 1,
-    prsMerged: 3,
-    reviewsCompleted: 4,
-    achievements: ['First Contribution', 'Clean Coder'],
-    lastContributionDate: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'pt_sam',
-    username: 'speedy_sam',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
-    points: 90,
-    streak: 2,
-    prsMerged: 6,
-    reviewsCompleted: 7,
-    achievements: ['Speed Runner', 'Pragmatist'],
-    lastContributionDate: new Date(Date.now() - 10 * 3600 * 1000).toISOString()
-  }
-];
-
-const SEED_AUDITS: AuditLog[] = [
-  {
-    id: 'aud_1',
-    action: 'Repository Registered',
-    details: 'Connected node-microservices-core to PR Review Agent.',
-    timestamp: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'aud_2',
-    action: 'PR Auto-Merged',
-    details: 'Successfully auto-merged Pull Request #48 for vector-index-agent.',
-    timestamp: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
-  }
-];
 
 class JsonDatabase {
   private cache: Schema | null = null;
@@ -433,16 +121,20 @@ class JsonDatabase {
   private initializeDb() {
     if (!fs.existsSync(DB_FILE)) {
       const initialSchema: Schema = {
-        repositories: SEED_REPOS,
-        pullRequests: SEED_PR_LIST,
+        repositories: [],
+        pullRequests: [],
         rules: DEFAULT_RULES,
-        reviews: SEED_REVIEWS,
-        chatMessages: SEED_CHAT,
-        contributorPoints: SEED_POINTS,
-        auditLogs: SEED_AUDITS,
+        reviews: [],
+        chatMessages: [],
+        contributorPoints: [],
+        auditLogs: [],
         webhookEvents: [],
         settings: DEFAULT_SETTINGS,
-        replays: []
+        replays: [],
+        users: [],
+        sessions: [],
+        notifications: [],
+        issues: []
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(initialSchema, null, 2), 'utf8');
       this.cache = initialSchema;
@@ -451,18 +143,22 @@ class JsonDatabase {
         const raw = fs.readFileSync(DB_FILE, 'utf8');
         this.cache = JSON.parse(raw);
       } catch (e) {
-        console.error("Error reading db file, regenerating seeds", e);
+        console.error("Error reading db file, regenerating fresh database", e);
         const initialSchema: Schema = {
-          repositories: SEED_REPOS,
-          pullRequests: SEED_PR_LIST,
+          repositories: [],
+          pullRequests: [],
           rules: DEFAULT_RULES,
-          reviews: SEED_REVIEWS,
-          chatMessages: SEED_CHAT,
-          contributorPoints: SEED_POINTS,
-          auditLogs: SEED_AUDITS,
+          reviews: [],
+          chatMessages: [],
+          contributorPoints: [],
+          auditLogs: [],
           webhookEvents: [],
           settings: DEFAULT_SETTINGS,
-          replays: []
+          replays: [],
+          users: [],
+          sessions: [],
+          notifications: [],
+          issues: []
         };
         fs.writeFileSync(DB_FILE, JSON.stringify(initialSchema, null, 2), 'utf8');
         this.cache = initialSchema;
@@ -474,10 +170,25 @@ class JsonDatabase {
     if (!this.cache) {
       this.initializeDb();
     }
-    if (!this.cache!.replays) {
-      this.cache!.replays = [];
+    const data = this.cache!;
+    if (!data.repositories) data.repositories = [];
+    if (!data.pullRequests) data.pullRequests = [];
+    if (!data.rules) data.rules = DEFAULT_RULES;
+    if (!data.reviews) data.reviews = [];
+    if (!data.chatMessages) data.chatMessages = [];
+    if (!data.contributorPoints) data.contributorPoints = [];
+    if (!data.auditLogs) data.auditLogs = [];
+    if (!data.webhookEvents) data.webhookEvents = [];
+    if (!data.settings) data.settings = DEFAULT_SETTINGS;
+    if (!data.settings.allowedAdminEmails) {
+      data.settings.allowedAdminEmails = ['anasabubakar7000@gmail.com', 'adesanyafuhad5@gmail.com'];
     }
-    return this.cache!;
+    if (!data.replays) data.replays = [];
+    if (!data.users) data.users = [];
+    if (!data.sessions) data.sessions = [];
+    if (!data.notifications) data.notifications = [];
+    if (!data.issues) data.issues = [];
+    return data;
   }
 
   private saveData(data: Schema) {
@@ -496,8 +207,11 @@ class JsonDatabase {
 
   addRepo(repo: Repository): Repository {
     const data = this.getData();
-    data.repositories.push(repo);
-    this.saveData(data);
+    // Prevent duplicate entries
+    if (!data.repositories.some(r => r.id === repo.id)) {
+      data.repositories.push(repo);
+      this.saveData(data);
+    }
     return repo;
   }
 
@@ -506,6 +220,8 @@ class JsonDatabase {
     const len = data.repositories.length;
     data.repositories = data.repositories.filter(r => r.id !== id);
     if (data.repositories.length !== len) {
+      // Also delete associated PRs
+      data.pullRequests = data.pullRequests.filter(pr => pr.repoId !== id);
       this.saveData(data);
       return true;
     }
@@ -523,6 +239,7 @@ class JsonDatabase {
 
   addPR(pr: PullRequest): PullRequest {
     const data = this.getData();
+    data.pullRequests = data.pullRequests.filter(p => p.id !== pr.id);
     data.pullRequests.unshift(pr);
     this.saveData(data);
     return pr;
@@ -567,7 +284,6 @@ class JsonDatabase {
 
   addReview(review: Review): Review {
     const data = this.getData();
-    // Remove existing review if there is one
     data.reviews = data.reviews.filter(r => r.prId !== review.prId);
     data.reviews.push(review);
     this.saveData(data);
@@ -624,20 +340,17 @@ class JsonDatabase {
     point.points += change;
     if (isNewMerge) {
       point.prsMerged += 1;
-      // Handle streak progression
       const lastDateStr = point.lastContributionDate;
       const today = new Date().toISOString().split('T')[0];
       if (lastDateStr) {
         const lastDate = lastDateStr.split('T')[0];
-        if (lastDate === today) {
-          // Already contributed today, maintain streak
-        } else {
+        if (lastDate !== today) {
           const diffTime = Math.abs(new Date(today).getTime() - new Date(lastDate).getTime());
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           if (diffDays === 1) {
             point.streak += 1;
           } else if (diffDays > 1) {
-            point.streak = 1; // reset
+            point.streak = 1;
           }
         }
       } else {
@@ -645,7 +358,6 @@ class JsonDatabase {
       }
       point.lastContributionDate = new Date().toISOString();
 
-      // Achievements triggers
       if (point.prsMerged >= 5 && !point.achievements.includes('Streak Master')) {
         point.achievements.push('Streak Master');
       }
@@ -714,6 +426,159 @@ class JsonDatabase {
     data.settings = { ...data.settings, ...updates };
     this.saveData(data);
     return data.settings;
+  }
+
+  // USER MANAGEMENT
+  getUsers(): User[] {
+    return this.getData().users;
+  }
+
+  getUser(id: string): User | undefined {
+    return this.getData().users.find(u => u.id === id);
+  }
+
+  getUserByEmail(email: string): User | undefined {
+    return this.getData().users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  }
+
+  getUserByUsername(username: string): User | undefined {
+    return this.getData().users.find(u => u.username.toLowerCase() === username.toLowerCase());
+  }
+
+  createUser(user: User): User {
+    const data = this.getData();
+    data.users.push(user);
+    this.saveData(data);
+    return user;
+  }
+
+  updateUser(userId: string, updates: Partial<User>): User | undefined {
+    const data = this.getData();
+    const idx = data.users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      data.users[idx] = { ...data.users[idx], ...updates };
+      this.saveData(data);
+      return data.users[idx];
+    }
+    return undefined;
+  }
+
+  // SESSIONS
+  getSessions(): Session[] {
+    return this.getData().sessions;
+  }
+
+  getSession(id: string): Session | undefined {
+    return this.getData().sessions.find(s => s.id === id);
+  }
+
+  createSession(session: Session): Session {
+    const data = this.getData();
+    data.sessions.push(session);
+    this.saveData(data);
+    return session;
+  }
+
+  deleteSession(id: string): boolean {
+    const data = this.getData();
+    const len = data.sessions.length;
+    data.sessions = data.sessions.filter(s => s.id !== id);
+    if (data.sessions.length !== len) {
+      this.saveData(data);
+      return true;
+    }
+    return false;
+  }
+
+  // NOTIFICATIONS
+  getNotifications(userId: string): Notification[] {
+    const data = this.getData();
+    return data.notifications.filter(n => n.userId === userId);
+  }
+
+  addNotification(notif: Omit<Notification, 'id' | 'timestamp' | 'isRead'>): Notification {
+    const data = this.getData();
+    const newNotif: Notification = {
+      ...notif,
+      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    data.notifications.unshift(newNotif);
+    if (data.notifications.length > 500) {
+      data.notifications = data.notifications.slice(0, 500);
+    }
+    this.saveData(data);
+    return newNotif;
+  }
+
+  markNotificationAsRead(id: string): boolean {
+    const data = this.getData();
+    const idx = data.notifications.findIndex(n => n.id === id);
+    if (idx !== -1) {
+      data.notifications[idx].isRead = true;
+      this.saveData(data);
+      return true;
+    }
+    return false;
+  }
+
+  markAllNotificationsAsRead(userId: string): boolean {
+    const data = this.getData();
+    let modified = false;
+    data.notifications = data.notifications.map(n => {
+      if (n.userId === userId && !n.isRead) {
+        modified = true;
+        return { ...n, isRead: true };
+      }
+      return n;
+    });
+    if (modified) {
+      this.saveData(data);
+    }
+    return modified;
+  }
+
+  // ISSUES
+  getIssues(): GitHubIssue[] {
+    const data = this.getData();
+    if (!data.issues) data.issues = [];
+    return data.issues;
+  }
+
+  addIssue(issue: GitHubIssue): GitHubIssue {
+    const data = this.getData();
+    if (!data.issues) data.issues = [];
+    data.issues = data.issues.filter(i => i.id !== issue.id);
+    data.issues.unshift(issue);
+    this.saveData(data);
+    return issue;
+  }
+
+  deleteIssue(id: string): boolean {
+    const data = this.getData();
+    if (!data.issues) data.issues = [];
+    const len = data.issues.length;
+    data.issues = data.issues.filter(i => i.id !== id);
+    if (data.issues.length !== len) {
+      this.saveData(data);
+      return true;
+    }
+    return false;
+  }
+
+  // PURGE ALL MOCK DATA FOR GITHUB SOURCE OF TRUTH
+  purgeMockData() {
+    const data = this.getData();
+    data.repositories = [];
+    data.pullRequests = [];
+    data.reviews = [];
+    data.chatMessages = [];
+    data.contributorPoints = [];
+    data.notifications = [];
+    data.issues = [];
+    data.webhookEvents = [];
+    this.saveData(data);
   }
 }
 
