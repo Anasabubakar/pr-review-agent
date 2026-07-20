@@ -1,0 +1,6 @@
+{
+  "name": "PR Review Agent",
+  "description": "An autonomous AI PR reviewer and maintainer that analyzes code diffs, evaluates strict override rules, runs interactive chat rooms for PR revisions, and automates merges.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
