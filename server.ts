@@ -12,6 +12,7 @@ import { PullRequest, Review, ChatMessage, WebhookEvent, ReviewReplay, User, Ses
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = 3000;
 
 app.use(express.json());
@@ -210,7 +211,15 @@ app.get('/api/auth/github/url', (req, res) => {
     if (!config.clientId) {
       return res.status(400).json({ error: "GitHub Client ID is not configured. Please configure GITHUB_CLIENT_ID in your environment or Admin Settings." });
     }
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/github/callback`;
+    let protocol = req.protocol;
+    if (req.headers['x-forwarded-proto']) {
+      protocol = String(req.headers['x-forwarded-proto']).split(',')[0].trim();
+    } else if (req.get('host')?.includes('localhost') || req.get('host')?.includes('127.0.0.1')) {
+      protocol = 'http';
+    } else {
+      protocol = 'https';
+    }
+    const redirectUri = `${protocol}://${req.get('host')}/api/auth/github/callback`;
     const params = new URLSearchParams({
       client_id: config.clientId,
       redirect_uri: redirectUri,

@@ -1,0 +1,432 @@
+{
+  "repositories": [
+    {
+      "id": "repo_fastapi_node",
+      "owner": "expressjs",
+      "name": "node-microservices-core",
+      "defaultBranch": "main",
+      "language": "TypeScript",
+      "description": "High performance enterprise framework built with modern Express routing conventions.",
+      "createdAt": "2026-06-20T14:26:13.336Z"
+    },
+    {
+      "id": "repo_vector_db",
+      "owner": "gemini-org",
+      "name": "vector-index-agent",
+      "defaultBranch": "main",
+      "language": "TypeScript",
+      "description": "Autonomous context-retrieval pipeline indexing system documentation with vector search capabilities.",
+      "createdAt": "2026-07-05T14:26:13.336Z"
+    },
+    {
+      "id": "repo_1784559516809",
+      "owner": "expressjs",
+      "name": "node-microservices-core",
+      "defaultBranch": "main",
+      "language": "TypeScript",
+      "description": "Enterprise microservice router",
+      "createdAt": "2026-07-20T14:58:36.809Z"
+    },
+    {
+      "id": "repo_1784559517009",
+      "owner": "gemini-org",
+      "name": "vector-index-agent",
+      "defaultBranch": "main",
+      "language": "TypeScript",
+      "description": "Embedding context pipelines",
+      "createdAt": "2026-07-20T14:58:37.009Z"
+    },
+    {
+      "id": "repo_1784559517213",
+      "owner": "facebook",
+      "name": "react",
+      "defaultBranch": "main",
+      "language": "TypeScript",
+      "description": "UI component framework",
+      "createdAt": "2026-07-20T14:58:37.213Z"
+    }
+  ],
+  "pullRequests": [
+    {
+      "id": "pr_101",
+      "repoId": "repo_fastapi_node",
+      "number": 101,
+      "title": "feat: Add JWT token validation middleware",
+      "state": "open",
+      "body": "Implements full JSON Web Token parsing, validation, and request decorating middleware for private paths.",
+      "headRef": "feat/jwt-middleware",
+      "baseRef": "main",
+      "author": "dev_alex_99",
+      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
+      "prUrl": "https://github.com/expressjs/node-microservices-core/pull/101",
+      "commentsCount": 3,
+      "pointsAwarded": 0,
+      "confidenceScore": 92,
+      "autoMerge": true,
+      "forceApproved": false,
+      "isFlagged": true,
+      "reviewStatus": "flagged",
+      "flagReason": "Touches sensitive path: middleware/auth.ts (Security Rule Triggered)",
+      "lineCount": 145,
+      "createdAt": "2026-07-18T14:26:13.336Z",
+      "updatedAt": "2026-07-19T14:26:13.336Z",
+      "diffText": "diff --git a/src/middleware/auth.ts b/src/middleware/auth.ts\nnew file mode 100644\nindex 0000000..9df2bc3\n--- /dev/null\n+++ b/src/middleware/auth.ts\n@@ -0,0 +1,24 @@\n+import { Request, Response, NextFunction } from 'express';\n+import jwt from 'jsonwebtoken';\n+\n+export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {\n+  const authHeader = req.headers['authorization'];\n+  const token = authHeader && authHeader.split(' ')[1];\n+\n+  if (!token) {\n+    return res.status(401).json({ error: 'Access token required' });\n+  }\n+\n+  // CRITICAL: Hardcoded backup secret key for auth fallback?\n+  const SECRET = process.env.JWT_SECRET || 'fallback_secret_not_safe';\n+\n+  jwt.verify(token, SECRET, (err: any, user: any) => {\n+    if (err) {\n+      return res.status(403).json({ error: 'Invalid or expired token' });\n+    }\n+    req.user = user;\n+    next();\n+  });\n+};\n+"
+    },
+    {
+      "id": "pr_102",
+      "repoId": "repo_vector_db",
+      "number": 48,
+      "title": "fix: Vector similarity sorting algorithm precision",
+      "state": "merged",
+      "body": "Corrects dot-product normalization formula that caused off-by-one ordering inside large context caches.",
+      "headRef": "fix/similarity-sort",
+      "baseRef": "main",
+      "author": "hacker_clara",
+      "authorAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80",
+      "prUrl": "https://github.com/gemini-org/vector-index-agent/pull/48",
+      "commentsCount": 2,
+      "pointsAwarded": 15,
+      "confidenceScore": 98,
+      "autoMerge": true,
+      "forceApproved": true,
+      "isFlagged": false,
+      "reviewStatus": "approved",
+      "flagReason": "",
+      "lineCount": 35,
+      "createdAt": "2026-07-16T14:26:13.336Z",
+      "updatedAt": "2026-07-17T14:26:13.336Z",
+      "diffText": "diff --git a/src/math/similarity.ts b/src/math/similarity.ts\nindex e234ef1..d12b399 100644\n--- a/src/math/similarity.ts\n+++ b/src/math/similarity.ts\n@@ -10,6 +10,6 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {\n   let sumA = 0;\n   let sumB = 0;\n   for (let i = 0; i < vecA.length; i++) {\n-    dotProduct += vecA[i] * vecB[i];\n+    dotProduct += vecA[i] * vecB[i];\n     sumA += vecA[i] * vecA[i];\n     sumB += vecB[i] * vecB[i];\n   }\n-  return dotProduct / (Math.sqrt(sumA) * Math.sqrt(sumB));\n+  const denominator = Math.sqrt(sumA) * Math.sqrt(sumB);\n+  return denominator === 0 ? 0 : dotProduct / denominator;\n }\n"
+    },
+    {
+      "id": "pr_103",
+      "repoId": "repo_fastapi_node",
+      "number": 102,
+      "title": "perf: caching layer replacement and Redis connection pool",
+      "state": "open",
+      "body": "Replaces standard in-memory array cache with high performance clusters and configurable thread pools.",
+      "headRef": "perf/redis-upgrade",
+      "baseRef": "main",
+      "author": "speedy_sam",
+      "authorAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80",
+      "prUrl": "https://github.com/expressjs/node-microservices-core/pull/102",
+      "commentsCount": 1,
+      "pointsAwarded": 0,
+      "confidenceScore": 72,
+      "autoMerge": false,
+      "forceApproved": false,
+      "isFlagged": false,
+      "reviewStatus": "changes_requested",
+      "flagReason": "",
+      "lineCount": 412,
+      "createdAt": "2026-07-20T04:26:13.336Z",
+      "updatedAt": "2026-07-20T05:26:13.336Z",
+      "diffText": "diff --git a/src/cache/redis.ts b/src/cache/redis.ts\nnew file mode 100644\nindex 0000000..f82b7cd\n--- /dev/null\n+++ b/src/cache/redis.ts\n@@ -0,0 +1,18 @@\n+import Redis from 'ioredis';\n+\n+// Unhandled promise rejection risk below, and missing process.env safety limits\n+export class CacheEngine {\n+  private client: Redis;\n+  \n+  constructor() {\n+    this.client = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');\n+  }\n+\n+  async get(key: string) {\n+    return await this.client.get(key);\n+  }\n+\n+  async set(key: string, val: string) {\n+    // No expiration parameter has been specified!\n+    await this.client.set(key, val);\n+  }\n+}\n+"
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule_sensitive_files",
+      "key": "sensitive_files",
+      "label": "Sensitive Paths Protection",
+      "description": "Flag PRs that modify auth, payment, database schemas, or CI/CD configuration files.",
+      "type": "boolean",
+      "value": true,
+      "isEnabled": true,
+      "category": "security"
+    },
+    {
+      "id": "rule_large_pr",
+      "key": "large_pr",
+      "label": "PR Size Limit",
+      "description": "Flag PRs that change more than a specific number of lines of code.",
+      "type": "number",
+      "value": 200,
+      "isEnabled": true,
+      "category": "size"
+    },
+    {
+      "id": "rule_first_time",
+      "key": "first_time",
+      "label": "First-time Contributor Validation",
+      "description": "Always flag or request manual verification for authors with zero prior merged PRs.",
+      "type": "boolean",
+      "value": true,
+      "isEnabled": true,
+      "category": "contributor"
+    },
+    {
+      "id": "rule_secrets_detected",
+      "key": "secrets_detected",
+      "label": "Secret and Credentials Scanning",
+      "description": "Scan diffs for password formulas, env declarations, secret tokens, or private keys.",
+      "type": "boolean",
+      "value": true,
+      "isEnabled": true,
+      "category": "security"
+    },
+    {
+      "id": "rule_confidence_threshold",
+      "key": "confidence_threshold",
+      "label": "Min AI Confidence Score",
+      "description": "Flag PR reviews where the AI rating falls below this percentage threshold.",
+      "type": "number",
+      "value": 80,
+      "isEnabled": true,
+      "category": "security"
+    },
+    {
+      "id": "rule_deleted_tests",
+      "key": "deleted_tests",
+      "label": "Deleted Test Code Alert",
+      "description": "Flag and block auto-merge if test files (.test.ts, spec.js, etc.) are removed or scaled down.",
+      "type": "boolean",
+      "value": true,
+      "isEnabled": true,
+      "category": "ci"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev_101",
+      "prId": "pr_101",
+      "score": 85,
+      "summary": "The JWT authentication middleware is mostly solid, but we flagged it because it updates a highly sensitive path (`src/middleware/auth.ts`) and includes a potentially risky hardcoded fallback secret key which violates our strict security standard.",
+      "correctness": "The routing middleware integrates well with Express standard arguments and correctly intercepts headers. Token split operation operates as expected.",
+      "security": "CRITICAL WARNING: The backup hardcoded string value `\"fallback_secret_not_safe\"` is set as a fallback when the `JWT_SECRET` environment variable is not defined. In a staging or production build without environment vars, this exposes the system to signature forging. Remove fallback secrets immediately.",
+      "performance": "Extremely lightweight token validation process. Minimal memory allocation overhead.",
+      "maintainability": "Well documented parameters and clean typing declarations.",
+      "inlineComments": [
+        {
+          "file": "src/middleware/auth.ts",
+          "line": 12,
+          "comment": "CRITICAL SECURITY BREACH: Never use a hardcoded secret key fallback in authentication modules. If `process.env.JWT_SECRET` is missing, the application should throw a fatal error on startup.",
+          "suggestion": "if (!process.env.JWT_SECRET) {\n  throw new Error('JWT_SECRET env variable must be declared');\n}\nconst SECRET = process.env.JWT_SECRET;",
+          "type": "issue"
+        },
+        {
+          "file": "src/middleware/auth.ts",
+          "line": 5,
+          "comment": "Recommendation: Restrict this middleware to only process Bearer tokens rather than arbitrary splits.",
+          "type": "info"
+        }
+      ],
+      "decidedAction": "flag",
+      "reason": "Touches protected sensitive auth files & contains fallback secrets.",
+      "confidence": 95,
+      "createdAt": "2026-07-19T14:26:13.336Z"
+    },
+    {
+      "id": "rev_102",
+      "prId": "pr_102",
+      "score": 99,
+      "summary": "Outstanding bugfix. The vector calculation correctly accounts for potential divide-by-zero scenarios and prevents sorting indexing from sliding into negative coordinates.",
+      "correctness": "The denominator-handling code is clean, well-bounded, and verified by mathematical tests.",
+      "security": "No security credentials or risk exposures identified in this module.",
+      "performance": "Optimized check runs. Safely checks values in memory without re-initializing coefficients.",
+      "maintainability": "Maintains code clarity and complies perfectly with vector index standards.",
+      "inlineComments": [],
+      "decidedAction": "approve",
+      "reason": "PR addresses bug precisely and includes essential bounds checking. Passed all override thresholds.",
+      "confidence": 99,
+      "createdAt": "2026-07-17T14:26:13.336Z"
+    },
+    {
+      "id": "rev_103",
+      "prId": "pr_103",
+      "score": 68,
+      "summary": "Review requested major structural modifications before merging this caching layer.",
+      "correctness": "Connection pool initialization is prone to unhandled errors if Redis is currently offline.",
+      "security": "Requires credential verification limits.",
+      "performance": "Unbounded cache sets are prone to memory leaks. Every caching mechanism must declare an explicit default TTL (Time-To-Live).",
+      "maintainability": "Lacks documentation on setup and required environment variables.",
+      "inlineComments": [
+        {
+          "file": "src/cache/redis.ts",
+          "line": 15,
+          "comment": "Performance Issue: Setting persistent keys without a TTL or maximum eviction configuration can slowly deplete Redis node memory.",
+          "suggestion": "await this.client.set(key, val, 'EX', 3600); // Set default 1 hour expiration",
+          "type": "warning"
+        }
+      ],
+      "decidedAction": "request_changes",
+      "reason": "Missing default TTL values and connection recovery blocks.",
+      "confidence": 88,
+      "createdAt": "2026-07-20T05:26:13.336Z"
+    }
+  ],
+  "chatMessages": [
+    {
+      "id": "msg_1",
+      "prId": "pr_101",
+      "sender": "agent",
+      "senderName": "PR Review Agent",
+      "senderAvatar": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&h=150&q=80",
+      "message": "👋 Hello Alex! I have completed analyzing your PR changes. I found **1 critical issue** and **1 general suggestion** regarding your JWT authentication module. Because this touches sensitive paths, this PR has been flagged for human maintainer approval.",
+      "timestamp": "2026-07-19T14:26:13.336Z",
+      "isSystem": true
+    },
+    {
+      "id": "msg_2",
+      "prId": "pr_101",
+      "sender": "contributor",
+      "senderName": "dev_alex_99",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
+      "message": "Thanks for the quick review! Ah, I see the hardcoded fallback. I added that just for my local development setup since I had not provisioned the environment variables. Let me fix it immediately.",
+      "timestamp": "2026-07-19T18:26:13.336Z"
+    },
+    {
+      "id": "msg_3",
+      "prId": "pr_101",
+      "sender": "admin",
+      "senderName": "Maintainer (You)",
+      "senderAvatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80",
+      "message": "Hey Alex, good catch by the agent. Please update the middleware to throw an explicit configuration error if JWT_SECRET is undefined, then re-push. We will approve and let the agent auto-merge it once checks pass!",
+      "timestamp": "2026-07-19T23:26:13.336Z"
+    }
+  ],
+  "contributorPoints": [
+    {
+      "id": "pt_clara",
+      "username": "hacker_clara",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80",
+      "points": 125,
+      "streak": 4,
+      "prsMerged": 8,
+      "reviewsCompleted": 12,
+      "achievements": [
+        "Fast Merger",
+        "Bug Squasher",
+        "Streak Master"
+      ],
+      "lastContributionDate": "2026-07-17T14:26:13.336Z"
+    },
+    {
+      "id": "pt_sam",
+      "username": "speedy_sam",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80",
+      "points": 90,
+      "streak": 2,
+      "prsMerged": 6,
+      "reviewsCompleted": 7,
+      "achievements": [
+        "Speed Runner",
+        "Pragmatist"
+      ],
+      "lastContributionDate": "2026-07-20T04:26:13.336Z"
+    },
+    {
+      "id": "pt_alex",
+      "username": "dev_alex_99",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
+      "points": 45,
+      "streak": 1,
+      "prsMerged": 3,
+      "reviewsCompleted": 4,
+      "achievements": [
+        "First Contribution",
+        "Clean Coder"
+      ],
+      "lastContributionDate": "2026-07-19T14:26:13.336Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "aud_1784560913781_z17th",
+      "action": "User Registered",
+      "details": "New contributor account registered for anasmasama7 (anasmasama7@gmail.com).",
+      "timestamp": "2026-07-20T15:21:53.781Z"
+    },
+    {
+      "id": "aud_1784560845526_z5x0o",
+      "action": "User Registered",
+      "details": "New maintainer account registered for anasmasama (anasabubakar7000@gmail.com).",
+      "timestamp": "2026-07-20T15:20:45.526Z"
+    },
+    {
+      "id": "aud_1784559517594_y42ia",
+      "action": "System Settings Changed",
+      "details": "SaaS global parameter configurations modified.",
+      "timestamp": "2026-07-20T14:58:37.594Z"
+    },
+    {
+      "id": "aud_1784559517214_po8n0",
+      "action": "Repository Connected",
+      "details": "Successfully connected repository facebook/react to automated PR review tracking.",
+      "timestamp": "2026-07-20T14:58:37.214Z"
+    },
+    {
+      "id": "aud_1784559517010_p6pq4",
+      "action": "Repository Connected",
+      "details": "Successfully connected repository gemini-org/vector-index-agent to automated PR review tracking.",
+      "timestamp": "2026-07-20T14:58:37.010Z"
+    },
+    {
+      "id": "aud_1784559516810_67c24",
+      "action": "Repository Connected",
+      "details": "Successfully connected repository expressjs/node-microservices-core to automated PR review tracking.",
+      "timestamp": "2026-07-20T14:58:36.810Z"
+    },
+    {
+      "id": "aud_1",
+      "action": "Repository Registered",
+      "details": "Connected node-microservices-core to PR Review Agent.",
+      "timestamp": "2026-06-20T14:26:13.336Z"
+    },
+    {
+      "id": "aud_2",
+      "action": "PR Auto-Merged",
+      "details": "Successfully auto-merged Pull Request #48 for vector-index-agent.",
+      "timestamp": "2026-07-17T14:26:13.336Z"
+    }
+  ],
+  "webhookEvents": [],
+  "settings": {
+    "githubClientId": "Ov23lipShV5MS2ssiYCl",
+    "githubClientSecret": "9bcce6589f2270da238ff9573246d6c89981665e",
+    "aiModel": "gemini-3.5-flash",
+    "aiPromptTemplate": "You are the autonomous PR Review Agent. Analyze the PR details, files changed, and code diff below.\nEvaluate based on: Correctness, Security, Performance, Maintainability, and Test Coverage.\n\nGenerate inline comments if issues are found, referencing files and lines.\nProvide a final verdict: approve, request_changes, or flag (for critical/security escalations).\nSpecify a confidence score (0-100) and clear reasoning.",
+    "reviewStrictness": "standard",
+    "webhookSecret": "pr_agent_secret_secure_1337",
+    "autoMergeDefault": true,
+    "isMaintenanceMode": false,
+    "pointsOnMerge": 15,
+    "allowedAdminEmails": [
+      "anasabubakar7000@gmail.com",
+      "adesanyafuhad5@gmail.com"
+    ]
+  },
+  "replays": [],
+  "users": [
+    {
+      "id": "user_1784560845525",
+      "email": "anasabubakar7000@gmail.com",
+      "username": "anasmasama",
+      "passwordHash": "ef656b9a49991eea04db5d223a3a7bbd4a62775d839916cfa3b155cc28386de1",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+      "role": "admin",
+      "createdAt": "2026-07-20T15:20:45.525Z"
+    },
+    {
+      "id": "user_1784560913780",
+      "email": "anasmasama7@gmail.com",
+      "username": "anasmasama7",
+      "passwordHash": "ef656b9a49991eea04db5d223a3a7bbd4a62775d839916cfa3b155cc28386de1",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+      "role": "member",
+      "createdAt": "2026-07-20T15:21:53.780Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "sess_8f8ad9d9-759c-4187-a6a2-38b75e1efa81",
+      "userId": "user_1784560845525",
+      "expiresAt": "2026-07-27T15:20:45.527Z"
+    },
+    {
+      "id": "sess_5abec7b5-05a6-45cc-901b-8d73052c2c24",
+      "userId": "user_1784560913780",
+      "expiresAt": "2026-07-27T15:21:53.781Z"
+    }
+  ],
+  "notifications": []
+}
